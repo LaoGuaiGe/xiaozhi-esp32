@@ -23,7 +23,6 @@ private:
     Button boot_button_;
     LcdDisplay* display_;
     i2c_master_bus_handle_t codec_i2c_bus_;
-    //Esp32Camera* camera_;
     void InitializeCodecI2c() {
         // Initialize I2C peripheral
         i2c_master_bus_config_t i2c_bus_cfg = {
@@ -89,54 +88,24 @@ private:
         panel_config.rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB;
         panel_config.bits_per_pixel = 16;
         ESP_ERROR_CHECK(esp_lcd_new_panel_st7789(panel_io, &panel_config, &panel));
-        ESP_ERROR_CHECK(esp_lcd_panel_reset(panel));
-        ESP_ERROR_CHECK(esp_lcd_panel_init(panel));
-        ESP_ERROR_CHECK(esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY));
-        ESP_ERROR_CHECK(esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y));
-        ESP_ERROR_CHECK(esp_lcd_panel_invert_color(panel, true));
-
+        
+        esp_lcd_panel_reset(panel);
+        esp_lcd_panel_init(panel);
+        esp_lcd_panel_invert_color(panel, true);
+        esp_lcd_panel_swap_xy(panel, DISPLAY_SWAP_XY);
+        esp_lcd_panel_mirror(panel, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y);
         display_ = new SpiLcdDisplay(panel_io, panel,
-                            DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
-                            {
-                                .text_font = &font_puhui_20_4,
-                                .icon_font = &font_awesome_20_4,
-                                .emoji_font = font_emoji_64_init(),
-                            });
+                                    DISPLAY_WIDTH, DISPLAY_HEIGHT, DISPLAY_OFFSET_X, DISPLAY_OFFSET_Y, DISPLAY_MIRROR_X, DISPLAY_MIRROR_Y, DISPLAY_SWAP_XY,
+                                    {
+                                        .text_font = &font_puhui_20_4,
+                                        .icon_font = &font_awesome_20_4,
+#if CONFIG_USE_WECHAT_MESSAGE_STYLE
+                                        .emoji_font = font_emoji_32_init(),
+#else
+                                        .emoji_font = font_emoji_64_init(),
+#endif
+                                    });
     }
-
-    // void InitializeCamera() {
-    //     // Open camera power
-
-    //     camera_config_t config = {};
-    //     config.ledc_channel = LEDC_CHANNEL_2;  // LEDC通道选择  用于生成XCLK时钟 但是S3不用
-    //     config.ledc_timer = LEDC_TIMER_2; // LEDC timer选择  用于生成XCLK时钟 但是S3不用
-    //     config.pin_d0 = CAMERA_PIN_D0;
-    //     config.pin_d1 = CAMERA_PIN_D1;
-    //     config.pin_d2 = CAMERA_PIN_D2;
-    //     config.pin_d3 = CAMERA_PIN_D3;
-    //     config.pin_d4 = CAMERA_PIN_D4;
-    //     config.pin_d5 = CAMERA_PIN_D5;
-    //     config.pin_d6 = CAMERA_PIN_D6;
-    //     config.pin_d7 = CAMERA_PIN_D7;
-    //     config.pin_xclk = CAMERA_PIN_XCLK;
-    //     config.pin_pclk = CAMERA_PIN_PCLK;
-    //     config.pin_vsync = CAMERA_PIN_VSYNC;
-    //     config.pin_href = CAMERA_PIN_HREF;
-    //     config.pin_sccb_sda = -1;   // 这里写-1 表示使用已经初始化的I2C接口
-    //     config.pin_sccb_scl = CAMERA_PIN_SIOC;
-    //     config.sccb_i2c_port = 1;
-    //     config.pin_pwdn = CAMERA_PIN_PWDN;
-    //     config.pin_reset = CAMERA_PIN_RESET;
-    //     config.xclk_freq_hz = XCLK_FREQ_HZ;
-    //     config.pixel_format = PIXFORMAT_RGB565;
-    //     config.frame_size = FRAMESIZE_VGA;
-    //     config.jpeg_quality = 12;
-    //     config.fb_count = 1;
-    //     config.fb_location = CAMERA_FB_IN_PSRAM;
-    //     config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
-
-    //     camera_ = new Esp32Camera(config);
-    // }
 
 public:
     LichuangDevTestBoard() :  boot_button_(BOOT_BUTTON_GPIO) {
@@ -145,18 +114,16 @@ public:
         InitializeSpi();
         InitializeButtons();
         InitializeSt7789Display();  
-        //InitializeCamera();
         GetBacklight()->RestoreBrightness();
     }
     
-
     virtual Led* GetLed() override {
         static SingleLed led(BUILTIN_LED_GPIO);
         return &led;
     }
 
     virtual AudioCodec* GetAudioCodec() override {
-        static Es8311AudioCodec audio_codec(codec_i2c_bus_, I2C_NUM_0, AUDIO_INPUT_SAMPLE_RATE, AUDIO_OUTPUT_SAMPLE_RATE,
+        static Es8311AudioCodec audio_codec(codec_i2c_bus_, I2C_NUM_1, AUDIO_INPUT_SAMPLE_RATE, AUDIO_OUTPUT_SAMPLE_RATE,
             AUDIO_I2S_GPIO_MCLK, AUDIO_I2S_GPIO_BCLK, AUDIO_I2S_GPIO_WS, AUDIO_I2S_GPIO_DOUT, AUDIO_I2S_GPIO_DIN,
             AUDIO_CODEC_PA_PIN, AUDIO_CODEC_ES8311_ADDR);
         return &audio_codec;
@@ -170,10 +137,6 @@ public:
         static PwmBacklight backlight(DISPLAY_BACKLIGHT_PIN, DISPLAY_BACKLIGHT_OUTPUT_INVERT);
         return &backlight;
     }
-    
-    // virtual Camera* GetCamera() override {
-    //     return camera_;
-    // }
 };
 
 DECLARE_BOARD(LichuangDevTestBoard);
